@@ -1,9 +1,9 @@
 # MotorControl
 Aruino Code for Motor Controller
 
-Motor Control is done over two topics:
-mcSpeed takes a std_msgs/String and holds a value of "0" to "255"
-mcDirection takes a std_msgs/String and holds a the following values:
+##Motor Control is done over two topics:
+###mcSpeed takes a std_msgs/String and holds a value of "0" to "255"
+###mcDirection takes a std_msgs/String and holds a the following values:
   "1000" -> Move Left
   "0100" -> Move Right
   "0010" -> Drive Forward
@@ -12,7 +12,7 @@ mcDirection takes a std_msgs/String and holds a the following values:
 Examples: "0100" 255 would mean turn right at 100% movement speed,
           "0001" 122 would mean drive backward at 50% movement speed
 
-DEBUGGING PROCEDURE:
+##DEBUGGING PROCEDURE:
 on a ubuntu install with ros and rosserial_arduino installed:
 1.) run roscore in terminal
 2.) open second terminal, and type 
