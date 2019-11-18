@@ -1,70 +1,89 @@
 #include<ros.h>
-#include<std_msgs/String.h>
+#include<std_msgs/Float32.h>
+#include<std_msgs/Int32.h>
 #include<geometry_msgs/Twist.h>
+#include<Wire.h>
+#include<Adafruit_Sensor.h>
+#include<Adafruit_BNO055.h>
+#include<utility/imumaths.h>
 
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
 ros::NodeHandle nh;
 
-uint8_t count = 1;  //for debugging, count and prev count assure new data are only repeated once to RPI4 over ROSSERIAL
+//used for detecting new event
+uint8_t count = 1;
 uint8_t prevCount = 0;
 
-String data_str;
-String speed_data_str;
-String direction_data_str;
-
 //geometry_msgs::Twist mcDirectionFeedback; //Data sent to RPi4
-std_msgs::String mcDirectionFeedback;  //use geometry_twist for final code, string is for debugging
-std_msgs::String mcSpeedFeedback;
+std_msgs::Int32 mcDirectionFeedback;  //use geometry_twist for final code, string is for debugging
+std_msgs::Int32 mcSpeedFeedback;
+std_msgs::Float32 mcBNOFeedback;
 
 ros::Publisher pubDirection("mcDirectionFeedback", &mcDirectionFeedback);
 ros::Publisher pubSpeed("mcSpeedFeedback", &mcSpeedFeedback);
+ros::Publisher pubBNO("mcBNO", &mcBNOFeedback);
 
- void doDirectionControll( const std_msgs::String &mcSubDirection) {
+void doDirectionControll( const std_msgs::Int32 &mcSubDirection) {
   count++;
-  data_str = mcSubDirection.data;
-  direction_data_str = data_str.substring(0,4);
-  speed_data_str = data_str.substring(4,8);
-  
-  if (direction_data_str == "1000") {
-    //turn left
-    mcDirectionFeedback.data = "turn left";
-  } else if (direction_data_str == "0100"){
-    //turn right
-    mcDirectionFeedback.data = "turn right";
-  } else if (direction_data_str == "0010"){
-    //drive forward
-    mcDirectionFeedback.data = "drive forward";
-  } else if (direction_data_str == "0001") {
-    //drive backward
-    mcDirectionFeedback.data = "drive backward";
-  } else {
-    //send error code to RPI4, bad data
-    mcDirectionFeedback.data = "Error, bad data";
+  switch(mcSubDirection.data) {
+    case 1:
+      //Go Forward
+      mcDirectionFeedback.data = mcSubDirection.data;
+      break;
+    case 2:
+      //Go Backward
+      mcDirectionFeedback.data = mcSubDirection.data;
+      break;
+    case 3:
+      //Turn Right
+      mcDirectionFeedback.data = mcSubDirection.data;
+      break;
+    case 4:
+      //Turn Left
+      mcDirectionFeedback.data = mcSubDirection.data;
+      break;
+    default:
+      //Stop
+      mcDirectionFeedback.data = mcSubDirection.data;
+      break;
   }
 }
 
-void doSpeedControll(const std_msgs::String mcSubSpeed) {
+void doSpeedControll(const std_msgs::Int32 mcSubSpeed) {
   count++;
   mcSpeedFeedback.data = mcSubSpeed.data;
 }
  
- ros::Subscriber<std_msgs::String> mcSubDirection("mcDirection", &doDirectionControll);
- ros::Subscriber<std_msgs::String> mcSubSpeed("mcSpeed", &doSpeedControll);
+ros::Subscriber<std_msgs::Int32> mcSubDirection("mcDirection", &doDirectionControll);
+ros::Subscriber<std_msgs::Int32> mcSubSpeed("mcSpeed", &doSpeedControll);
 
 void setup() {
   // put your setup code here, to run once:
   nh.initNode();
   nh.advertise(pubDirection);
   nh.advertise(pubSpeed);
+  nh.advertise(pubBNO);
   nh.subscribe(mcSubDirection);
   nh.subscribe(mcSubSpeed);
+  // initialize the BNO sensor
+  if(!bno.begin())
+  {
+    while(1);
+  }
+  delay(1000);
+  bno.setExtCrystalUse(true);
 }
 
 void loop() {
+  sensors_event_t event;
+  bno.getEvent(&event);
+  mcBNOFeedback.data = event.orientation.x;
+  pubBNO.publish(&mcBNOFeedback);
   if (count > prevCount) {
     pubDirection.publish(&mcDirectionFeedback);
     pubSpeed.publish(&mcSpeedFeedback);
     prevCount = count;
   }
   nh.spinOnce();
-  delay(1000);
+  delay(100);
 }
