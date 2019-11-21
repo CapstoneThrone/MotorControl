@@ -21,7 +21,7 @@ Topic is called mcBNO listen on mcBNO, broadcasts on 10ms delay
 * 3.) Create a listener to validate the responses. The topics are: mcSpeedFeedback and mcDirection Feedback. The commands are either:
   rostopic echo mcSpeedFeedback
   rostopic echo mcDirectionFeedback, depending on what data you wish to validate
-4* .) Publish some data to see the program run. The command is :
+* 4.) Publish some data to see the program run. The command is :
   rostopic pub mcSpeed std_msgs/Int32 255 for direction and 
   rostopic pub mcDirection std_msgs/Int32 1 for sleed controll <- NOTE: The backslashes are neccesary as an escape sequence in order for the terminal to properly parse the string
   
