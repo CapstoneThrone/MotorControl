@@ -14,6 +14,21 @@ ros::NodeHandle nh;
 uint8_t count = 1;
 uint8_t prevCount = 0;
 
+//declare pins for motor control
+int motorPwmPins[] = {2,3,4,5};
+int motorDirectionPins[] = {43,44,45,46,47,48,49,50};
+/*                    FL(2)    FR(3)  <- Motor PWM pins
+ *      Forward       43       45     <- Motor Direction Pins
+ *      Reverse       44       46     <- Motor Direction Pins
+ *                    RL(4)    RR(5)  <- Motor PWM pins
+ *      Forward       47       49     <- Motor Direction Pins
+ *      Reverse       48       50     <- Motor Direction Pins
+ */
+ int moveForward[] = {43,45,57,49};
+ int moveBackward[] = {44, 46, 48, 50};
+ int turnRight[] = {43, 46, 50, 47};
+ int turnLeft[] = {44, 45, 48, 50};
+
 //geometry_msgs::Twist mcDirectionFeedback; //Data sent to RPi4
 std_msgs::Int32 mcDirectionFeedback;  //use geometry_twist for final code, string is for debugging
 std_msgs::Int32 mcSpeedFeedback;
@@ -21,32 +36,12 @@ std_msgs::Float32 mcBNOFeedback;
 
 ros::Publisher pubDirection("mcDirectionFeedback", &mcDirectionFeedback);
 ros::Publisher pubSpeed("mcSpeedFeedback", &mcSpeedFeedback);
+
 ros::Publisher pubBNO("mcBNO", &mcBNOFeedback);
 
 void doDirectionControll( const std_msgs::Int32 &mcSubDirection) {
   count++;
-  switch(mcSubDirection.data) {
-    case 1:
-      //Go Forward
-      mcDirectionFeedback.data = mcSubDirection.data;
-      break;
-    case 2:
-      //Go Backward
-      mcDirectionFeedback.data = mcSubDirection.data;
-      break;
-    case 3:
-      //Turn Right
-      mcDirectionFeedback.data = mcSubDirection.data;
-      break;
-    case 4:
-      //Turn Left
-      mcDirectionFeedback.data = mcSubDirection.data;
-      break;
-    default:
-      //Stop
-      mcDirectionFeedback.data = mcSubDirection.data;
-      break;
-  }
+  mcDirectionFeedback.data = mcSubDirection.data;
 }
 
 void doSpeedControll(const std_msgs::Int32 mcSubSpeed) {
@@ -71,7 +66,15 @@ void setup() {
     while(1);
   }
   delay(1000);
+  
+  //Ititialize pins for motor control
   bno.setExtCrystalUse(true);
+  for (int i = 0; i < 4; i++) {
+    pinMode(motorPwmPins[i], OUTPUT);
+  }
+  for (int i = 0; i < 8; i++) {
+    pinMode(motorDirectionPins[i], OUTPUT);
+  }
 }
 
 void loop() {
@@ -83,6 +86,45 @@ void loop() {
     pubDirection.publish(&mcDirectionFeedback);
     pubSpeed.publish(&mcSpeedFeedback);
     prevCount = count;
+  }
+  switch(mcDirectionFeedback.data) {
+    case 1: //Forward
+      for (int i = 0; i < 4; i++) {
+        digitalWrite(motorDirectionPins[moveForward[i]], HIGH);
+        digitalWrite(motorDirectionPins[moveBackward[i]], LOW);
+        analogWrite(motorPwmPins[i], mcSpeedFeedback.data);
+      }
+      break;
+    case 2: //Reverse
+      for (int i = 0; i < 4; i++) {
+        digitalWrite(motorDirectionPins[moveForward[i]], LOW);
+        digitalWrite(motorDirectionPins[moveBackward[i]], HIGH);
+        analogWrite(motorPwmPins[i], mcSpeedFeedback.data);
+      }
+      break;
+    case 3: //Turn Right
+      for (int i = 0; i < 4; i++) {
+        digitalWrite(motorDirectionPins[turnRight[i]], HIGH);
+        digitalWrite(motorDirectionPins[turnLeft[i]], LOW);
+        analogWrite(motorPwmPins[i], mcSpeedFeedback.data);
+      }
+      break;
+    case 4: //Turn Left
+      for (int i = 0; i < 4; i++) {
+        digitalWrite(motorDirectionPins[turnRight[i]], LOW);
+        digitalWrite(motorDirectionPins[turnLeft[i]], HIGH);
+        analogWrite(motorPwmPins[i], mcSpeedFeedback.data);
+      }
+      break;
+    default:  //Stop
+        for(int i = 0; i < 8; i++) {
+          digitalWrite(motorDirectionPins[i], LOW);
+        }
+        for (int i = 0; i < 4; i++) {
+          analogWrite(motorPwmPins[i], 0);
+        }
+        
+      break;
   }
   nh.spinOnce();
   delay(100);
