@@ -3,11 +3,11 @@
 #include<std_msgs/Int32.h>
 #include<geometry_msgs/Twist.h>
 #include<Wire.h>
-//#include<Adafruit_Sensor.h>
-//#include<Adafruit_BNO055.h>
-//#include<utility/imumaths.h>
+#include<Adafruit_Sensor.h>
+#include<Adafruit_BNO055.h>
+#include<utility/imumaths.h>
 
-//Adafruit_BNO055 bno = Adafruit_BNO055(55);
+Adafruit_BNO055 bno = Adafruit_BNO055(55);
 ros::NodeHandle nh;
 
 //used for detecting new event
@@ -38,8 +38,7 @@ std_msgs::Int32 mcSpeedFeedback;
 std_msgs::Float32 mcBNOFeedback;
 
 ros::Publisher pubDirection("mcDirectionFeedback", &mcDirectionFeedback);
-ros::Publisher pubSpeed("mcSpeedFeedback", &mcSpeedFeedback);
-
+ros::Publisher pubSpeed("mcSpeedFeedback", &mcSpeedFeedback);SS
 ros::Publisher pubBNO("mcBNO", &mcBNOFeedback);
 
 void doDirectionControll( const std_msgs::Int32 &mcSubDirection) {
@@ -64,7 +63,7 @@ void setup() {
   nh.subscribe(mcSubDirection);
   nh.subscribe(mcSubSpeed);
   // initialize the BNO sensor
-  /*
+  
   if(!bno.begin())
   {
     while(1);
@@ -73,7 +72,7 @@ void setup() {
   
   //Ititialize pins for motor control
   bno.setExtCrystalUse(true);
-  */
+  
   for (int i = 0; i < 4; i++) {
     pinMode(motorPwmPins[i], OUTPUT);
   }
@@ -83,12 +82,12 @@ void setup() {
 }
 
 void loop() {
-  /*
+  
   sensors_event_t event;
   bno.getEvent(&event);
   mcBNOFeedback.data = event.orientation.x;
   pubBNO.publish(&mcBNOFeedback);
-  */
+  
   if (count > prevCount) {
     pubDirection.publish(&mcDirectionFeedback);
     pubSpeed.publish(&mcSpeedFeedback);
