@@ -1,9 +1,3 @@
+@Library('amr-shared-lib')
 
-pipeline {
-  agent: any
-  stages {
-    stage('test') {
-      echo "test"
-    }
-  }
-}
+buildROS()
