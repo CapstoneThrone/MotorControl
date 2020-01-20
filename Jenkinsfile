@@ -1,3 +1,3 @@
 @Library('amr-shared-lib')
 
-buildROS()
+buildROS
