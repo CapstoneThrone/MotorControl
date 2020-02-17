@@ -1,11 +1,16 @@
 # MotorControl
 Aruino Code for Motor Controller
 
+#Added 2/15/20 mcVoltageFeedback
+* topic is called mcVoltageFeedback
+
 #Added 11/16/19 BNO x Data 
-Topic is called mcBNO listen on mcBNO, broadcasts on 10ms delay
+* topic is called mcBNO listen on mcBNO
 
 ## Motor Control is done over two topics:
+
 ### mcSpeed takes a std_msgs/Int32 and holds a value of 0 to 255
+
 ### mcDirection takes a std_msgs/Int32 and holds a the following values:
   1 -> Move Left
   2 -> Move Right
