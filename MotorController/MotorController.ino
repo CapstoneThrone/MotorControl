@@ -78,6 +78,7 @@ void setup() {  //setup code runs on device startup
 
   //A0 for voltage divider from battery input
   pinMode(voltageDividerInput, INPUT);
+  nh.advertise(pubVoltage);
   
   //ititialize BNO055
   nh.initNode();
@@ -86,6 +87,7 @@ void setup() {  //setup code runs on device startup
   nh.advertise(pubBNO);
   nh.subscribe(mcSubDirection);
   nh.subscribe(mcSubSpeed);
+  
   
   // initialize the BNO sensor
   if(!bno.begin())
@@ -113,11 +115,12 @@ void loop() { //loop code runs repeatedly as long as system is up
   intermediate += analogRead(voltageDividerInput);
   voltageTimer++;
   if (voltageTimer == voltageTimerCount){
-    //calculate average voltage
-    mcVoltageFeedback.data = intermediate / voltageTimerCount;
+    //calculate average voltage. ADC is 1024 bits, voltage divider gives radio of roughly 5/12 V for prototype
+    mcVoltageFeedback.data = intermediate/voltageTimerCount/1023*5;
     //publish updated voltage
     pubVoltage.publish(&mcVoltageFeedback);
     voltageTimer = 0;
+    intermediate = 0;
   }
 
   //read data from BNO055 and publish update
