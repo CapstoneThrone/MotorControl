@@ -28,8 +28,8 @@ double wheelDiameterMeters = 0.090;
 double wheelCircumferenceMeters = wheelDiameterMeters * 3.14;
 double ticksPerRev = 280; //From motor encoder datasheet
 double PERIOD = 100; //Period in ms for PID to sample from
-double Kp = 2.5;  //Constant of Proportionality
-double Ki = 6;   //Constant of Integration
+double Kp = 2;  //Constant of Proportionality
+double Ki = 0;   //Constant of Integration
 double Kd = 0;   //Constant of Derivation (ignored for this program)
 
 //Speed, Distance, and Direction Variables
@@ -325,12 +325,26 @@ void loop() { //loop code runs repeatedly as long as system is up
     pulsePerPeriodRR = (pulseRR - prevPulseRR);
     prevPulseRR = pulseRR;
 
-    //run PID controllers
-    pidFL.Compute();
-    pidRR.Compute();
-    pidFR.Compute();
-    pidRL.Compute();
-    
+    //run PID controllers only when needed. Prevents jumping when changing directions due to PID overcompensation
+    switch(target_dir)
+    {
+      case 0:
+        break;
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+        pidFL.Compute();
+        pidRR.Compute();
+        pidFR.Compute();
+        pidRL.Compute();
+        break;
+      default:
+        break;
+    }
+   
     //Update duty cycles for each motor drive pin
     analogWrite(motorPwmPins[0], newPWMFL);
     analogWrite(motorPwmPins[1], newPWMFR);
