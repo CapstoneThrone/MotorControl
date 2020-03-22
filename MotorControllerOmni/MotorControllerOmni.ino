@@ -1,4 +1,4 @@
-//#define DEBUGROS 1
+#define DEBUGROS 1
 //#define DEBUG 1
 /**
    This progarm is written for use with an Arduino MEGA 2560 r3.
@@ -22,6 +22,10 @@
 #include<PID_v1.h>
 
 
+//System physical params for voltage divivder. Voltage of battery / Voltage of 
+//divider while system is running
+double voltageRatio = 2.876;
+
 //System physical params for PID control
 int t = 0;
 double wheelDiameterMeters = 0.090;
@@ -29,8 +33,8 @@ double wheelCircumferenceMeters = wheelDiameterMeters * 3.14;
 double ticksPerRev = 280; //From motor encoder datasheet
 double PERIOD = 100; //Period in ms for PID to sample from
 double Kp = 2;  //Constant of Proportionality
-double Ki = 0;   //Constant of Integration
-double Kd = 0;   //Constant of Derivation (ignored for this program)
+double Ki = 12.5;  //Constant of Integration
+double Kd = 0;  //Constant of Derivation (ignored for this program)
 
 //Speed, Distance, and Direction Variables
 double target_speed = 0; //Speed in Meters/Second (input to Arduino)
@@ -192,7 +196,7 @@ void doDirectionControl( const std_msgs::Int32 &mcSubDirection) {
 
 void doSpeedControl(const std_msgs::Float32 mcSubSpeed) {
   target_speed = 1.0 * mcSubSpeed.data;
-  target_tickrate = 1.0 * (((target_speed / wheelCircumferenceMeters) * 280) / (1000 / PERIOD));
+  target_tickrate = 1.0 * (((target_speed / wheelCircumferenceMeters) * ticksPerRev) / (1000 / PERIOD));
   if (target_speed == 0)
   {
     newPWMFL = 0;
@@ -204,7 +208,7 @@ void doSpeedControl(const std_msgs::Float32 mcSubSpeed) {
 
 void doDistanceControl(const std_msgs::Float32 mcSubDistance) {
   target_distance = mcSubDistance.data;
-  target_ticks_to_distance = (target_distance / ( .09 * 3.14 )) * 280;
+  target_ticks_to_distance = (target_distance / ( wheelCircumferenceMeters )) * ticksPerRev;
 }
 
 ros::Subscriber<std_msgs::Int32> mcSubDirection("mcDirection", &doDirectionControl);
@@ -298,8 +302,8 @@ void loop() { //loop code runs repeatedly as long as system is up
     voltageTimer++;
     if (voltageTimer == voltageTimerCount)
     {
-      //calculate average voltage. ADC is 1024 bits, voltage divider gives radio of roughly 5/12 V for prototype
-      mcVoltageFeedback.data = intermediate / voltageTimerCount / 1023 * 5;
+      //calculate average voltage. ADC is 1024 bits, voltageRatio defined above
+      mcVoltageFeedback.data = voltageRatio * (intermediate / voltageTimerCount / 1023 * 5);
       //publish updated voltage
       pubVoltage.publish(&mcVoltageFeedback);
       voltageTimer = 0;
@@ -312,7 +316,9 @@ void loop() { //loop code runs repeatedly as long as system is up
     mcBNOFeedback.data = event.orientation.x;
     pubBNO.publish(&mcBNOFeedback);
     #ifdef DEBUGROS
-    mcDebugFeedback.data = "in loop";
+    String debugData = "FL_ACTUAL_TICKRATE: " + String(pulsePerPeriodFL,4)
+                       + "\tDESIRED_TICKRATE : " + String(target_tickrate, 4);
+    mcDebugFeedback.data = debugData.c_str();
     pubDebug.publish(&mcDebugFeedback);
     #endif
     
