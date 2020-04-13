@@ -1,4 +1,4 @@
-//#define DEBUGROS 1
+#define DEBUGROS 1
 //#define DEBUG 1
 /**
    This progarm is written for use with an Arduino MEGA 2560 r3.
@@ -33,8 +33,10 @@ double wheelCircumferenceMeters = wheelDiameterMeters * 3.14;
 double ticksPerRev = 280; //From motor encoder datasheet
 double PERIOD = 100; //Period in ms for PID to sample from
 double Kp = 2;  //Constant of Proportionality
-double Ki = 12.5;  //Constant of Integration
+double Ki = 20;  //Constant of Integration
 double Kd = 0;  //Constant of Derivation (ignored for this program)
+float target_linear_velocity;
+float target_angular_velocity;
 
 //Speed, Distance, and Direction Variables
 double target_speed = 0; //Speed in Meters/Second (input to Arduino)
@@ -142,6 +144,8 @@ float intermediate;
 uint8_t voltageTimer = 0;
 uint8_t voltageTimerCount = 10;
 
+/**
+
 void doDirectionControl( const std_msgs::Int32 &mcSubDirection) {
   target_dir = mcSubDirection.data;
   
@@ -211,9 +215,76 @@ void doDistanceControl(const std_msgs::Float32 mcSubDistance) {
   target_ticks_to_distance = (target_distance / ( wheelCircumferenceMeters )) * ticksPerRev;
 }
 
-ros::Subscriber<std_msgs::Int32> mcSubDirection("mcDirection", &doDirectionControl);
-ros::Subscriber<std_msgs::Float32> mcSubSpeed("mcSpeed", &doSpeedControl);
-ros::Subscriber<std_msgs::Float32> mcSubDistance("mcDistance", &doDistanceControl);
+*/
+
+void do_cmd_vel(const geometry_msgs::Twist cmd_vel) {
+    //break down the twist angular and linear parts here
+    target_linear_velocity = cmd_vel.linear.x; 
+    target_angular_velocity = cmd_vel.angular.z;
+    target_tickrate = abs(1.0 * ((((target_linear_velocity + target_angular_velocity) / wheelCircumferenceMeters) * ticksPerRev) / (1000 / PERIOD)));
+
+    if (target_linear_velocity == 0 && target_angular_velocity == 0)
+    {
+      target_tickrate = 0;
+    }
+      
+
+  /*
+    //Clear all enable pins before issuing a new command
+    for (int i = 0; i < 8; i++)
+    {
+      digitalWrite(motorDirectionPins[i], LOW);
+    }
+    
+    //Decoding motor direction, setting motor enable pins
+    switch (target_dir)
+    {
+      case 1: //Forward
+        for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveForward[i]], HIGH);
+        }
+        break;
+      case 2: //Reverse
+        digitalWrite(26, LOW); // solves unknown error with right weel not runnign backwards
+        for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveBackward[i]], HIGH);
+        }
+        break;
+      case 3: //Turn Right
+        for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[turnRight[i]], HIGH);
+        }
+        break;
+      case 4: //Turn Left
+       for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[turnLeft[i]], HIGH);
+        }
+        break;
+      case 5: //Strafe Right
+        for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveRight[i]], HIGH);
+        }
+        break;
+      case 6: //Strafe Left
+        for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveLeft[i]], HIGH);
+        }
+        break;
+      default:  //Stop
+        for (int i = 0; i < 8; i++)
+        {
+          digitalWrite(motorDirectionPins[i], LOW);
+        }
+        break;
+    }
+    */
+}
+
+//ros::Subscriber<std_msgs::Int32> mcSubDirection("mcDirection", &doDirectionControl);
+//ros::Subscriber<std_msgs::Float32> mcSubSpeed("mcSpeed", &doSpeedControl);
+//ros::Subscriber<std_msgs::Float32> mcSubDistance("mcDistance", &doDistanceControl);
+
+ros::Subscriber<geometry_msgs::Twist> cmd_vel("cmd_vel", &do_cmd_vel);
 
 void setup() {  //setup code runs on device startup
 
@@ -244,9 +315,13 @@ void setup() {  //setup code runs on device startup
   nh.initNode();
   nh.advertise(pubVoltage);
   nh.advertise(pubBNO);
+  nh.subscribe(cmd_vel);
+  /*
   nh.subscribe(mcSubDirection);
   nh.subscribe(mcSubSpeed);
   nh.subscribe(mcSubDistance);
+  */
+
   #ifdef DEBUGROS
   nh.advertise(pubDebug);
   #endif
@@ -316,8 +391,12 @@ void loop() { //loop code runs repeatedly as long as system is up
     mcBNOFeedback.data = event.orientation.x;
     pubBNO.publish(&mcBNOFeedback);
     #ifdef DEBUGROS
-    String debugData = "FL_ACTUAL_TICKRATE: " + String(pulsePerPeriodFL,4)
+    String debugData =  "Liear Velocity: " + String(target_linear_velocity,4) + 
+                        " Angular Velocity: " + String(target_angular_velocity,4);
+    
+    /*"FL_ACTUAL_TICKRATE: " + String(pulsePerPeriodFL,4)
                        + "\tDESIRED_TICKRATE : " + String(target_tickrate, 4);
+                       */
     mcDebugFeedback.data = debugData.c_str();
     pubDebug.publish(&mcDebugFeedback);
     #endif
@@ -330,6 +409,48 @@ void loop() { //loop code runs repeatedly as long as system is up
     prevPulseRL = pulseRL;
     pulsePerPeriodRR = (pulseRR - prevPulseRR);
     prevPulseRR = pulseRR;
+
+    
+    if (target_angular_velocity > 0.0 && target_linear_velocity == 0.0)
+    {
+      //turn left
+      target_dir = 3;
+      for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[turnLeft[i]], HIGH);
+      }
+    }
+    else if (target_angular_velocity < 0.0 && target_linear_velocity == 0.0)
+    {
+      //turn right
+      target_dir = 4;
+      for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[turnRight[i]], HIGH);
+      }
+    }
+    else if (target_linear_velocity > 0.0 && target_angular_velocity == 0.0)
+    {
+      //drive straight
+      target_dir = 1;
+      for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveForward[i]], HIGH);
+      }
+    }
+    else if (target_linear_velocity < 0.0 && target_angular_velocity == 0.0)
+    {
+      //drive backwards
+      target_dir = 2;
+       for (int i = 0; i < 4; i++) {
+          digitalWrite(motorDirectionPins[moveBackward[i]], HIGH);
+       }
+    }
+    else {
+      //Don't move
+      target_dir = 0;
+      for(int i = 0; i < 8; i++) {
+        digitalWrite(motorDirectionPins[i], LOW);
+      }
+    }
+   
 
     //run PID controllers only when needed. Prevents jumping when changing directions due to PID overcompensation
     switch(target_dir)
@@ -367,6 +488,7 @@ void loop() { //loop code runs repeatedly as long as system is up
        Serial.print(" ");
       Serial.println(newPWMFL);
     #endif
+    
       
     t = millis();
 
