@@ -27,6 +27,7 @@ Aruino Code for Motor Controller
 
 * 2.) Start the Serial Communication with the Arduino Mega: 
   rosrun rosserial_arduino serial_node.py /dev/ttyACM0
+  **Note: This port is determined in linux by running "dmesg | grep tty", it may be different on your machine
   
  * You can echo the mcVoltageFeedback and mcBNO topics to see their output
  ** "rostopic echo mcBNO"
