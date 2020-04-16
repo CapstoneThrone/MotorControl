@@ -17,6 +17,9 @@ Aruino Code for Motor Controller
 ##If doing development work, the alternate process below can be used to run the arduino using the rosserial_arduino package from a PC.
 
 ##Running from a PC for Debugging purposes procedure:
+
+##Run the provided start.sh shell script
+##OR do the following manual procedure
 * on a ubuntu install with ros and rosserial_arduino installed:
 * 1.) natigate to /opt/ros/melodic/share/teleop_twist_joy/ and runlaunch teleop_twist.launch
 ** Note: This step requires that you first insteall the teleop_twist_joy package found here: https://wiki.ros.org/teleop_twist_joy
