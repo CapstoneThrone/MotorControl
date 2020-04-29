@@ -258,8 +258,8 @@ void setup() {  //setup code runs on device startup
   mcBNOFeedback.layout.dim[2].size = 1;
   mcBNOFeedback.layout.dim[2].stride = 1;
   mcBNOFeedback.layout.data_offset = 0;
-  mcBNOFeedback.data = (float *) malloc(sizeof(float)*8);
-  mcBNOFeedback.data_length = 4;
+  mcBNOFeedback.data = (float *) malloc(sizeof(float)*3);
+  mcBNOFeedback.data_length = 3;
 
   #ifdef DEBUG
   Serial.println("Setup End");
