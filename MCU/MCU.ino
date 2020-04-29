@@ -15,12 +15,14 @@
 #include<std_msgs/Int32.h>
 #include<std_msgs/String.h>
 #include<geometry_msgs/Twist.h>
+#include "std_msgs/MultiArrayLayout.h"
+#include "std_msgs/MultiArrayDimension.h"
+#include "std_msgs/Float32MultiArray.h"
 #include<Wire.h>
 #include<Adafruit_Sensor.h>
 #include<Adafruit_BNO055.h>
 #include<utility/imumaths.h>
 #include<PID_v1.h>
-
 
 //System physical params for voltage divivder. Voltage of battery / Voltage of 
 //divider while system is running
@@ -142,8 +144,9 @@ const int turnRight[] = {0, 2, 4, 6};
 const int turnLeft[] = {1, 3, 5, 7};
 
 //Feedback variables
-std_msgs::Float32 mcBNOFeedback;
-std_msgs::Float32 mcVoltageFeedback;
+std_msgs::Float32 mcVoltageFeedback;  //Voltage is a single float
+std_msgs::Float32MultiArray mcBNOFeedback;  //Vector of floats for x, y, and z acceleration data
+imu::Vector<3> euler; //IMU-Specific datatype for getting raw data from sensor
 
 //Node handle for arduino to spin from
 ros::NodeHandle nh;
@@ -238,6 +241,25 @@ void setup() {  //setup code runs on device startup
   pidRL.SetTunings(Kp, Ki, Kd);
   pidRR.SetMode(AUTOMATIC);
   pidRR.SetTunings(Kp, Ki, Kd);
+  
+  //MultiArrays require exact memory allocation
+  mcBNOFeedback.layout.dim = (std_msgs::MultiArrayDimension *)
+  malloc(sizeof(std_msgs::MultiArrayDimension)*3);
+  //Three properties are set, label, size, and stride
+  //size is the number of elements, stride is the length of each element relative to the datatype
+  //Label is what you will see when the topic is echoed through rostopic in terminal
+  mcBNOFeedback.layout.dim[0].label = "X_accel";
+  mcBNOFeedback.layout.dim[0].size = 1;
+  mcBNOFeedback.layout.dim[0].stride = 1;
+  mcBNOFeedback.layout.dim[1].label = "Y_accel";
+  mcBNOFeedback.layout.dim[1].size = 1;
+  mcBNOFeedback.layout.dim[1].stride = 1;
+  mcBNOFeedback.layout.dim[2].label = "Z_accel";
+  mcBNOFeedback.layout.dim[2].size = 1;
+  mcBNOFeedback.layout.dim[2].stride = 1;
+  mcBNOFeedback.layout.data_offset = 0;
+  mcBNOFeedback.data = (float *) malloc(sizeof(float)*8);
+  mcBNOFeedback.data_length = 4;
 
   #ifdef DEBUG
   Serial.println("Setup End");
@@ -268,8 +290,11 @@ void loop() { //loop code runs repeatedly as long as system is up
 
     //read data from BNO055 and publish update
     sensors_event_t event;
-    bno.getEvent(&event);
-    mcBNOFeedback.data = event.orientation.x;
+    //bno.getEvent(&event);
+    euler = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    mcBNOFeedback.data[0] = euler.x();
+    mcBNOFeedback.data[1] = euler.y();
+    mcBNOFeedback.data[2] = euler.z();
     pubBNO.publish(&mcBNOFeedback);
 
     /**
